@@ -1,0 +1,134 @@
+#include <boost/asio.hpp>
+#include <iostream>
+
+using namespace boost::asio;
+using namespace std;
+
+int main()
+{
+  io_service service;
+
+  // Create an endpoint for the server to listen on.
+  ip::tcp::endpoint endpoint(ip::tcp::v4(), 12345);
+
+  // Create an acceptor socket.
+  ip::tcp::acceptor acceptor(service, endpoint);
+
+  // Create a socket to handle the incoming connection.
+  ip::tcp::socket socket(service);
+
+  // Wait for an incoming connection.
+  acceptor.accept(socket);
+
+  // Write a message to the connected client.
+  write(socket, buffer("Hello, client!"));
+
+  return 0;
+}
+
+//*
+
+In this example, we first create
+ an io_service object, which is the core I/O service
+  provided by Boost Asio. Then, we create an endpoint to
+   listen on, using the IP version 4 (IPv4) protocol and 
+port 12345
+
+Next, we create an acceptor socket by passing the io_service object and the endpoint to the ip::tcp::acceptor constructor. This
+ creates the socket and binds it to the specified endpoint.
+ Note that this example only demonstrates the basic steps for using the Boost Asio acceptor class. In a real-world scenario, you would typically want to handle multiple clients in a separate thread, 
+ handle errors, and handle other events asynchronously.
+
+
+ IS ACCEPT BLOCKING
+ Yes, the accept method in the example above is a blocking call. It blocks the execution of the program until an incoming connection is accepted. This means that the program will not do anything else until a client connects to the server and the accept call returns.
+
+In a real-world scenario, you would typically want to use asynchronous methods to handle incoming connections, so that your server can continue to do other things while waiting for incoming connections. You can use the async_accept method from the Boost Asio library to handle incoming connections asynchronously. This method returns immediately and provides a callback
+function that will be invoked when a connection is accepted.
+
+how so you accept and tranfer the connection to a new socket in boost???
+
+
+#include <boost/asio.hpp>
+#include <iostream>
+
+using namespace boost::asio;
+using namespace std;
+
+void handle_connection(const boost::system::error_code& error,
+                       ip::tcp::socket new_socket)
+{
+  if (!error)
+  {
+    // Write a message to the connected client.
+    write(new_socket, buffer("Hello, client!"));
+  }
+  else
+  {
+    cout << "Error: " << error.message() << endl;
+  }
+}
+
+int main()
+{
+  io_service service;
+
+  // Create an endpoint for the server to listen on.
+  ip::tcp::endpoint endpoint(ip::tcp::v4(), 12345);
+
+  // Create an acceptor socket.
+  ip::tcp::acceptor acceptor(service, endpoint);
+
+  // Start accepting incoming connections.
+  acceptor.async_accept(ip::tcp::socket(service), &handle_connection);
+
+  // Run the service's event loop to process incoming connections.
+  service.run();
+
+  return 0;
+}
+In this example, we first create an io_service object and an endpoint to listen on, as in the previous example. Then, we create an acceptor socket and bind it to the endpoint.
+
+Next, we call the async_accept method on the acceptor object, passing an instance of ip::tcp::socket and a callback function handle_connection as arguments. The async_accept method returns immediately,
+ allowing the program to continue executing while it waits for incoming connections. When a connection is accepted, the handle_connection function will be called with the new socket and any error information.
+
+Finally, we call the run method on the io_service object to start the service's event loop. This event loop is responsible for processing incoming connections and
+ invoking the callback functions.
+
+In the handle_connection function, we check for errors and write a message to the connected client if there are no errors. This function is executed asynchronously, so it does not block the event loop or prevent other connections from being processed.
+
+
+Boost Asio sockets store information about the remote endpoint (i.e., the client endpoint) of the connection.
+
+When a connection is accepted, the async_accept method creates a new socket to represent the connection, and the endpoint of the connected client is stored in the remote_endpoint member of the new socket. The remote_endpoint can be accessed using the remote_endpoint method of the socket.
+
+Here is an example of how to access the remote endpoint of a connected client in Boost Asio:
+#include <boost/asio.hpp>
+#include <iostream>
+
+using namespace boost::asio;
+using namespace std;
+
+void handle_connection(const boost::system::error_code& error,
+                       ip::tcp::socket new_socket)
+{
+  if (!error)
+  {
+    // Get the remote endpoint of the connected client.
+    ip::tcp::endpoint remote_endpoint = new_socket.remote_endpoint();
+
+    // Write the remote endpoint to the console.
+    cout << "Client connected from " << remote_endpoint << endl;
+
+    // Write a message to the connected client.
+    write(new_socket, buffer("Hello, client!"));
+  }
+  else
+  {
+    cout << "Error: " << error.message() << endl;
+  }
+}
+
+// ...
+
+*//
